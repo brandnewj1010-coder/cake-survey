@@ -17,3 +17,19 @@ export async function GET(
   if (error) return NextResponse.json(null)
   return NextResponse.json(data)
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  const { name } = await params
+  const decodedName = decodeURIComponent(name)
+
+  const { error } = await supabase
+    .from('responses')
+    .delete()
+    .eq('name', decodedName)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
