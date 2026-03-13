@@ -109,7 +109,7 @@ function DeleteConfirmModal({ name, onConfirm, onCancel, deleting }: {
         <div className="text-5xl mb-4">🗑️</div>
         <h2 className="text-lg font-extrabold text-gray-800 mb-2">응답을 삭제할까요?</h2>
         <p className="text-gray-500 text-sm mb-6">
-          <span className="font-bold text-rose-500">{name}</span>님의 응답이 DB에서 완전히 삭제됩니다. 되돌릴 수 없어요!
+          <span className="font-bold text-rose-500">{name}</span>님의 응답이 DB에서 완전히 삭제됩니다.<br />되돌릴 수 없어요!
         </p>
         <div className="flex gap-3">
           <button
@@ -280,16 +280,14 @@ export default function ResultsPage() {
                       </p>
                     </div>
 
-                    {/* 삭제 버튼 - 본인 카드에만 표시 */}
-                    {isMe && (
-                      <button
-                        onClick={() => setDeleteTarget(resp.name)}
-                        className="ml-auto flex items-center gap-1 px-3 py-1.5 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium border border-transparent hover:border-red-100"
-                        title="내 응답 삭제"
-                      >
-                        🗑️ 삭제
-                      </button>
-                    )}
+                    {/* 삭제 버튼 - 모든 카드에 표시 */}
+                    <button
+                      onClick={() => setDeleteTarget(resp.name)}
+                      className="ml-auto flex items-center gap-1 px-3 py-1.5 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium border border-transparent hover:border-red-100"
+                      title="응답 삭제"
+                    >
+                      🗑️ 삭제
+                    </button>
                   </div>
 
                   <div className="space-y-3">
@@ -342,7 +340,7 @@ export default function ResultsPage() {
         )}
 
         <p className="text-center text-gray-300 text-xs mt-10">
-          15초마다 자동 업데이트 · 삭제는 본인 카드에서만 가능합니다
+          15초마다 자동 업데이트
         </p>
       </div>
     </main>
