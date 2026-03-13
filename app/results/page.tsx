@@ -2,170 +2,267 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 
-type CakeResult = {
+type SurveyResponse = {
   id: string
   name: string
-  description: string | null
-  image_url: string | null
-  likes: number
-  dislikes: number
-  total: number
-  likeRate: number
+  liked_cakes: string[]
+  disliked_cakes: string[]
+  created_at: string
+}
+
+type RankItem = { name: string; count: number }
+type Rankings = { topLiked: RankItem[]; topDisliked: RankItem[] }
+
+function getCakeEmoji(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('초코') || n.includes('choco')) return '🍫'
+  if (n.includes('딸기') || n.includes('strawberry')) return '🍓'
+  if (n.includes('치즈') || n.includes('cheese')) return '🧀'
+  if (n.includes('당근') || n.includes('carrot')) return '🥕'
+  if (n.includes('레몬') || n.includes('lemon')) return '🍋'
+  if (n.includes('바닐라') || n.includes('vanilla')) return '🍦'
+  if (n.includes('블루베리') || n.includes('blueberry')) return '🫐'
+  if (n.includes('마카롱') || n.includes('macaron')) return '🍬'
+  if (n.includes('녹차') || n.includes('matcha') || n.includes('green')) return '🍵'
+  if (n.includes('티라미수') || n.includes('tiramisu')) return '☕'
+  if (n.includes('망고') || n.includes('mango')) return '🥭'
+  if (n.includes('복숭아') || n.includes('peach')) return '🍑'
+  if (n.includes('사과') || n.includes('apple')) return '🍎'
+  if (n.includes('포도') || n.includes('grape')) return '🍇'
+  if (n.includes('생크림') || n.includes('크림') || n.includes('cream')) return '🍰'
+  if (n.includes('홍차') || n.includes('얼그레이')) return '🫖'
+  if (n.includes('밤') || n.includes('chestnut')) return '🌰'
+  if (n.includes('오레오') || n.includes('oreo')) return '🍪'
+  if (n.includes('피스타치오')) return '💚'
+  return '🎂'
+}
+
+const rankMedal = ['🥇', '🥈', '🥉']
+
+function RankingModal({ rankings, onClose }: { rankings: Rankings; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <div
+        className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-300 hover:text-gray-500 text-2xl font-bold"
+        >
+          ×
+        </button>
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🏆</div>
+          <h2 className="text-xl font-extrabold text-gray-800">케이크 인기 순위</h2>
+          <p className="text-gray-400 text-xs mt-1">팀원들의 취향을 집계했어요</p>
+        </div>
+
+        <div className="space-y-6">
+          {/* 좋아요 TOP 3 */}
+          <div>
+            <h3 className="text-sm font-bold text-green-600 mb-3 flex items-center gap-2">
+              <span>👍</span> 가장 사랑받는 케이크 TOP 3
+            </h3>
+            {rankings.topLiked.length === 0 ? (
+              <p className="text-gray-300 text-xs text-center py-2">아직 데이터가 없습니다</p>
+            ) : (
+              <div className="space-y-2">
+                {rankings.topLiked.map((item, i) => (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-3 bg-green-50 rounded-2xl px-4 py-3"
+                  >
+                    <span className="text-xl">{rankMedal[i]}</span>
+                    <span className="text-lg">{getCakeEmoji(item.name)}</span>
+                    <span className="font-semibold text-gray-700 flex-1">{item.name}</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                      {item.count}명
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 불호 TOP 3 */}
+          <div>
+            <h3 className="text-sm font-bold text-red-500 mb-3 flex items-center gap-2">
+              <span>👎</span> 가장 불호하는 케이크 TOP 3
+            </h3>
+            {rankings.topDisliked.length === 0 ? (
+              <p className="text-gray-300 text-xs text-center py-2">아직 데이터가 없습니다</p>
+            ) : (
+              <div className="space-y-2">
+                {rankings.topDisliked.map((item, i) => (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-3 bg-red-50 rounded-2xl px-4 py-3"
+                  >
+                    <span className="text-xl">{rankMedal[i]}</span>
+                    <span className="text-lg">{getCakeEmoji(item.name)}</span>
+                    <span className="font-semibold text-gray-700 flex-1">{item.name}</span>
+                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                      {item.count}명
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function ResultsPage() {
-  const [results, setResults] = useState<CakeResult[]>([])
-  const [totalVoters, setTotalVoters] = useState(0)
+  const [responses, setResponses] = useState<SurveyResponse[]>([])
+  const [rankings, setRankings] = useState<Rankings | null>(null)
+  const [showRanking, setShowRanking] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const fetchResults = useCallback(async () => {
-    const res = await fetch('/api/results')
-    const data = await res.json()
-    if (!res.ok) return
-    setResults(data.results)
-    setTotalVoters(data.totalVoters)
-    setLastUpdated(new Date())
+  const fetchData = useCallback(async () => {
+    const [resRes, rankRes] = await Promise.all([
+      fetch('/api/responses'),
+      fetch('/api/rankings'),
+    ])
+    const [resData, rankData] = await Promise.all([resRes.json(), rankRes.json()])
+    setResponses(resData)
+    setRankings(rankData)
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchResults()
-    const interval = setInterval(fetchResults, 10000)
+    fetchData()
+    const interval = setInterval(fetchData, 15000)
     return () => clearInterval(interval)
-  }, [fetchResults])
-
-  const totalVotes = results.reduce((sum, r) => sum + r.total, 0)
-  const topCake = results[0]
-  const mostDisliked = [...results].sort((a, b) => b.dislikes - a.dislikes)[0]
+  }, [fetchData])
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-bounce">🎂</div>
-          <p className="text-gray-500 text-lg">결과를 불러오는 중...</p>
+          <div className="text-6xl mb-4 animate-bounce">🎂</div>
+          <p className="text-gray-400">불러오는 중...</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50">
-      <div className="max-w-5xl mx-auto px-4 py-10">
+    <main className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
+      {showRanking && rankings && (
+        <RankingModal rankings={rankings} onClose={() => setShowRanking(false)} />
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 py-12">
         {/* 헤더 */}
-        <div className="text-center mb-10">
-          <div className="text-6xl mb-3">📊</div>
-          <h1 className="text-4xl font-extrabold text-gray-800 mb-2">케이크 수요조사 결과</h1>
-          <p className="text-gray-500">
-            총 <span className="font-bold text-rose-500">{totalVoters}명</span>이 참여했습니다 ·{' '}
-            <span className="font-bold text-gray-600">{totalVotes}개</span> 투표
+        <div className="text-center mb-8">
+          <div className="text-6xl mb-3">🍰</div>
+          <h1 className="text-3xl font-extrabold text-gray-800">우리 팀 케이크 호불호</h1>
+          <p className="text-gray-400 text-sm mt-2">
+            총 <span className="font-bold text-rose-500">{responses.length}명</span>이 참여했습니다
           </p>
-          {lastUpdated && (
-            <p className="text-gray-400 text-xs mt-1">
-              마지막 업데이트: {lastUpdated.toLocaleTimeString('ko-KR')} (10초마다 자동 새로고침)
-            </p>
-          )}
-          <Link
-            href="/"
-            className="inline-block mt-4 px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-sm font-semibold transition-colors shadow"
-          >
-            🎂 투표하러 가기
-          </Link>
+          <div className="flex justify-center gap-3 mt-5">
+            <button
+              onClick={() => setShowRanking(true)}
+              className="px-5 py-2.5 bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white rounded-full text-sm font-bold shadow-md transition-all hover:shadow-lg"
+            >
+              🏆 순위보기
+            </button>
+            <Link
+              href="/"
+              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-600 rounded-full text-sm font-semibold border border-gray-200 shadow-sm transition-all"
+            >
+              ✏️ 내 응답 입력/수정
+            </Link>
+          </div>
         </div>
 
-        {/* 하이라이트 카드 */}
-        {results.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-            <div className="bg-gradient-to-br from-yellow-400 to-orange-400 text-white rounded-2xl p-6 shadow-lg">
-              <div className="text-3xl mb-2">🏆</div>
-              <p className="text-sm font-medium opacity-80 mb-1">가장 사랑받는 케이크</p>
-              <p className="text-2xl font-extrabold">{topCake?.name}</p>
-              <p className="text-sm mt-1 opacity-90">
-                👍 {topCake?.likes}표 · 좋아요율 {topCake?.likeRate}%
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-gray-500 to-gray-700 text-white rounded-2xl p-6 shadow-lg">
-              <div className="text-3xl mb-2">😬</div>
-              <p className="text-sm font-medium opacity-80 mb-1">가장 호불호 갈리는 케이크</p>
-              <p className="text-2xl font-extrabold">{mostDisliked?.name}</p>
-              <p className="text-sm mt-1 opacity-90">
-                👎 {mostDisliked?.dislikes}표
-              </p>
-            </div>
+        {/* 응답 목록 */}
+        {responses.length === 0 ? (
+          <div className="text-center py-20 text-gray-300">
+            <div className="text-5xl mb-4">🫙</div>
+            <p>아직 응답이 없습니다</p>
+            <Link href="/" className="text-rose-400 text-sm underline mt-2 inline-block">
+              첫 번째로 응답하러 가기
+            </Link>
           </div>
-        )}
-
-        {/* 결과 목록 */}
-        <div className="space-y-4">
-          {results.map((cake, index) => (
-            <div key={cake.id} className="bg-white rounded-2xl shadow-md overflow-hidden">
-              <div className="flex items-center gap-4 p-5">
-                {/* 순위 */}
-                <div className={`text-2xl font-extrabold w-10 text-center ${
-                  index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-orange-400' : 'text-gray-300'
-                }`}>
-                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
+        ) : (
+          <div className="space-y-4">
+            {responses.map((resp) => (
+              <div
+                key={resp.id}
+                className="bg-white rounded-3xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-50"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-200 to-pink-300 flex items-center justify-center text-white font-extrabold text-base shadow-sm">
+                    {resp.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-800">{resp.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(resp.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
                 </div>
 
-                {/* 이미지 */}
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  {cake.image_url ? (
-                    <Image src={cake.image_url} alt={cake.name} fill className="object-cover" sizes="64px" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-2xl">🎂</div>
+                <div className="space-y-3">
+                  {resp.liked_cakes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
+                        👍 <span>호</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {resp.liked_cakes.map((cake) => (
+                          <span
+                            key={cake}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-100"
+                          >
+                            <span className="text-base">{getCakeEmoji(cake)}</span>
+                            {cake}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {resp.disliked_cakes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-red-500 mb-2 flex items-center gap-1">
+                        👎 <span>불호</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {resp.disliked_cakes.map((cake) => (
+                          <span
+                            key={cake}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-full text-sm font-medium border border-red-100"
+                          >
+                            <span className="text-base">{getCakeEmoji(cake)}</span>
+                            {cake}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {resp.liked_cakes.length === 0 && resp.disliked_cakes.length === 0 && (
+                    <p className="text-gray-300 text-sm">아직 입력된 내용이 없습니다</p>
                   )}
                 </div>
-
-                {/* 정보 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-bold text-gray-800 text-lg">{cake.name}</h3>
-                    <div className="flex gap-3 text-sm text-gray-600 ml-2 flex-shrink-0">
-                      <span className="text-green-600 font-semibold">👍 {cake.likes}</span>
-                      <span className="text-red-500 font-semibold">👎 {cake.dislikes}</span>
-                    </div>
-                  </div>
-
-                  {/* 진행 바 */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden flex">
-                      {cake.total > 0 ? (
-                        <>
-                          <div
-                            className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-700"
-                            style={{ width: `${cake.likeRate}%` }}
-                          />
-                          <div
-                            className="h-full bg-gradient-to-r from-red-400 to-rose-500 transition-all duration-700"
-                            style={{ width: `${100 - cake.likeRate}%` }}
-                          />
-                        </>
-                      ) : (
-                        <div className="w-full h-full bg-gray-200" />
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500 w-14 text-right flex-shrink-0">
-                      {cake.total > 0 ? `좋아요 ${cake.likeRate}%` : '투표 없음'}
-                    </span>
-                  </div>
-                </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {results.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <div className="text-5xl mb-3">🗳️</div>
-            <p>아직 투표 데이터가 없습니다.</p>
+            ))}
           </div>
         )}
 
-        <p className="text-center text-gray-400 text-sm mt-12">
-          결과는 10초마다 자동 업데이트됩니다
+        <p className="text-center text-gray-300 text-xs mt-10">
+          15초마다 자동 업데이트
         </p>
       </div>
     </main>
